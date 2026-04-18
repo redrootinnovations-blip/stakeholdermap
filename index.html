@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stakeholder Map – Behalte den Überblick über dein Netzwerk</title>
+  <meta name="description" content="Dein persönliches Tool für Beziehungsintelligenz. Behalte den Überblick über wichtige Kontakte – beruflich, privat oder beides." />
+  <meta property="og:title" content="Stakeholder Map – Behalte den Überblick über dein Netzwerk" />
+  <meta property="og:description" content="Dein persönliches Tool für Beziehungsintelligenz. Behalte den Überblick über wichtige Kontakte." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand-50:  #f0f8fa;
+      --brand-100: #d9eef4;
+      --brand-200: #b2dde8;
+      --brand-300: #8ecbd9;
+      --brand-400: #5baec3;
+      --brand-500: #3f96ae;
+      --brand-600: #2d7a93;
+      --brand-700: #25606f;
+      --brand-800: #1e4d5c;
+      --brand-900: #153845;
+      --gray-50:  #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      color: var(--gray-800);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Icon base styles ─────────────────────────────────────────────── */
+    [data-lucide] { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+    [data-lucide] svg { display: block; }
+
+    /* ── NAV ──────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto;
+      padding: 0 24px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      font-weight: 900; font-size: 1.1rem;
+      color: var(--brand-800); letter-spacing: -0.02em;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo .version-badge {
+      font-size: 0.65rem; font-weight: 600;
+      color: var(--brand-500);
+      background: var(--brand-50);
+      border: 1px solid var(--brand-200);
+      padding: 2px 7px; border-radius: 999px;
+    }
+    .nav-cta {
+      background: var(--brand-600); color: #fff;
+      font-weight: 700; font-size: 0.875rem;
+      padding: 9px 20px; border-radius: 10px;
+      transition: background 0.18s; white-space: nowrap;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .nav-cta:hover { background: var(--brand-700); }
+
+    /* ── AD BANNER ────────────────────────────────────────────────────── */
+    .ad-banner-top {
+      background: var(--gray-50); border-bottom: 1px solid var(--gray-100);
+      text-align: center; padding: 8px 24px;
+      font-size: 0.78rem; color: var(--gray-400);
+    }
+    .ad-banner-top span {
+      display: inline-block; background: var(--gray-100);
+      border: 1px dashed var(--gray-200); border-radius: 6px;
+      padding: 4px 24px; min-width: 320px;
+    }
+
+    /* ── HERO ─────────────────────────────────────────────────────────── */
+    .hero {
+      padding: 80px 24px 72px; text-align: center;
+      background: linear-gradient(175deg, var(--brand-50) 0%, #fff 60%);
+      border-bottom: 1px solid var(--brand-100);
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 0.78rem; font-weight: 700; color: var(--brand-600);
+      background: var(--brand-50); border: 1px solid var(--brand-200);
+      padding: 5px 14px; border-radius: 999px;
+      letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 22px;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 900;
+      color: var(--brand-900); letter-spacing: -0.03em; line-height: 1.1;
+      max-width: 720px; margin: 0 auto 20px;
+    }
+    .hero h1 em { font-style: normal; color: var(--brand-600); }
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.2rem); color: var(--gray-500);
+      max-width: 580px; margin: 0 auto 36px; line-height: 1.65; font-weight: 400;
+    }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 9px;
+      background: var(--brand-600); color: #fff;
+      font-weight: 800; font-size: 1rem;
+      padding: 14px 32px; border-radius: 14px;
+      transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+      box-shadow: 0 4px 20px rgba(45,122,147,0.25);
+    }
+    .btn-primary:hover {
+      background: var(--brand-700); transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(45,122,147,0.35);
+    }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #fff; color: var(--brand-700);
+      font-weight: 600; font-size: 1rem;
+      padding: 14px 28px; border-radius: 14px;
+      border: 1.5px solid var(--brand-200);
+      transition: background 0.18s, border-color 0.18s;
+    }
+    .btn-secondary:hover { background: var(--brand-50); border-color: var(--brand-400); }
+    .hero-note {
+      margin-top: 16px; font-size: 0.8rem; color: var(--gray-400);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    /* ── SOCIAL BAR ───────────────────────────────────────────────────── */
+    .social-bar {
+      background: #fff; border-bottom: 1px solid var(--gray-100);
+      padding: 18px 24px; text-align: center;
+    }
+    .social-bar p {
+      font-size: 0.82rem; color: var(--gray-400); margin-bottom: 12px;
+      text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600;
+    }
+    .social-pills { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .social-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--gray-50); border: 1px solid var(--gray-200);
+      border-radius: 999px; padding: 6px 14px;
+      font-size: 0.82rem; color: var(--gray-600); font-weight: 500;
+    }
+    .social-pill [data-lucide] { color: var(--brand-500); }
+
+    /* ── FEATURES ─────────────────────────────────────────────────────── */
+    .section { max-width: 1100px; margin: 0 auto; padding: 72px 24px; }
+    .section-label {
+      text-align: center; font-size: 0.78rem; font-weight: 700;
+      color: var(--brand-500); text-transform: uppercase;
+      letter-spacing: 0.07em; margin-bottom: 12px;
+    }
+    .section-title {
+      text-align: center;
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem); font-weight: 800;
+      color: var(--brand-900); letter-spacing: -0.025em;
+      margin-bottom: 48px; line-height: 1.2;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .feature-card {
+      background: var(--gray-50); border: 1px solid var(--gray-200);
+      border-radius: 20px; padding: 28px 26px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .feature-card:hover {
+      border-color: var(--brand-300);
+      box-shadow: 0 4px 24px rgba(45,122,147,0.08);
+    }
+    .feature-icon-wrap {
+      width: 48px; height: 48px;
+      background: var(--brand-50); border: 1px solid var(--brand-100);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px; color: var(--brand-600);
+    }
+    .feature-title {
+      font-size: 1rem; font-weight: 700;
+      color: var(--brand-900); margin-bottom: 8px;
+    }
+    .feature-desc { font-size: 0.88rem; color: var(--gray-500); line-height: 1.65; }
+
+    /* ── FOR WHO ──────────────────────────────────────────────────────── */
+    .forwho-section {
+      background: linear-gradient(175deg, var(--brand-50), #fff);
+      border-top: 1px solid var(--brand-100);
+      border-bottom: 1px solid var(--brand-100);
+    }
+    .forwho-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .forwho-card {
+      background: #fff; border: 1px solid var(--brand-100);
+      border-radius: 16px; padding: 24px 20px; text-align: center;
+    }
+    .forwho-icon-wrap {
+      width: 52px; height: 52px;
+      background: var(--brand-50); border: 1px solid var(--brand-100);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px; color: var(--brand-600);
+    }
+    .forwho-card .label {
+      font-weight: 700; font-size: 0.92rem;
+      color: var(--brand-800); margin-bottom: 6px;
+    }
+    .forwho-card .desc { font-size: 0.82rem; color: var(--gray-500); line-height: 1.5; }
+
+    /* ── PRIVACY STRIP ────────────────────────────────────────────────── */
+    .privacy-strip {
+      background: var(--brand-800); color: #fff;
+      padding: 36px 24px; text-align: center;
+    }
+    .privacy-strip h3 {
+      font-size: 1.3rem; font-weight: 800; margin-bottom: 8px;
+      letter-spacing: -0.02em;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .privacy-strip p {
+      font-size: 0.9rem; color: var(--brand-200);
+      max-width: 560px; margin: 0 auto; line-height: 1.6;
+    }
+    .privacy-badges {
+      display: flex; gap: 12px; justify-content: center;
+      flex-wrap: wrap; margin-top: 20px;
+    }
+    .privacy-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px; padding: 5px 14px;
+      font-size: 0.8rem; font-weight: 600; color: var(--brand-100);
+    }
+
+    /* ── CTA BLOCK ────────────────────────────────────────────────────── */
+    .cta-block { text-align: center; padding: 80px 24px; }
+    .cta-block h2 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 900;
+      color: var(--brand-900); letter-spacing: -0.03em; margin-bottom: 14px;
+    }
+    .cta-block p {
+      font-size: 1.05rem; color: var(--gray-500); margin-bottom: 32px;
+      max-width: 480px; margin-left: auto; margin-right: auto;
+      line-height: 1.6;
+    }
+    .cta-block .btn-primary { font-size: 1.1rem; padding: 16px 40px; }
+
+    /* ── AD MID ───────────────────────────────────────────────────────── */
+    .ad-mid {
+      background: var(--gray-50);
+      border-top: 1px solid var(--gray-100); border-bottom: 1px solid var(--gray-100);
+      text-align: center; padding: 20px 24px;
+    }
+    .ad-mid-inner {
+      display: inline-block; background: #fff;
+      border: 1px dashed var(--gray-200); border-radius: 12px;
+      padding: 16px 40px; min-width: 728px; max-width: 100%;
+      color: var(--gray-400); font-size: 0.8rem;
+    }
+    .ad-mid-inner .ad-label {
+      display: block; font-size: 0.65rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--gray-300); margin-bottom: 4px;
+    }
+
+    /* ── FOOTER ───────────────────────────────────────────────────────── */
+    footer { background: var(--gray-900); color: var(--gray-400); padding: 36px 24px; }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; gap: 16px;
+      align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .footer-logo {
+      font-weight: 900; font-size: 0.95rem; color: #fff;
+      display: flex; align-items: center; gap: 9px;
+    }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    .footer-links a { font-size: 0.82rem; color: var(--gray-400); transition: color 0.15s; }
+    .footer-links a:hover { color: var(--brand-300); }
+    .footer-note { font-size: 0.75rem; color: var(--gray-500); width: 100%; margin-top: 12px; }
+    .footer-note [data-lucide] { color: #e05c74; }
+
+    /* ── RESPONSIVE ───────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .hero { padding: 56px 20px 52px; }
+      .section { padding: 52px 20px; }
+      .ad-mid-inner { min-width: 0; width: 100%; padding: 16px 20px; }
+      .nav-inner { padding: 0 16px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Ad Banner -->
+  <div class="ad-banner-top">
+    <span>Werbeanzeige · 728×90</span>
+  </div>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <i data-lucide="handshake" width="22" height="22"></i>
+        Stakeholder Map
+        <span class="version-badge">v1.0</span>
+      </div>
+      <a href="stakeholder-manager.html" class="nav-cta">
+        Jetzt starten
+        <i data-lucide="arrow-right" width="16" height="16"></i>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-eyebrow">
+      <i data-lucide="shield-check" width="13" height="13"></i>
+      Kostenlos · Privat · Kein Account nötig
+    </div>
+    <h1>Behalte den Überblick.<br/><em>Dein Netzwerk ist dein Asset.</em></h1>
+    <p class="hero-sub">
+      Dein persönliches Tool für Beziehungsintelligenz. Verwalte deine wichtigsten Kontakte,
+      verstehe ihren Stellenwert und schaffe Transparenz – beruflich, privat oder beides.
+    </p>
+    <div class="hero-actions">
+      <a href="stakeholder-manager.html" class="btn-primary">
+        <i data-lucide="rocket" width="18" height="18"></i>
+        App öffnen – kostenlos
+      </a>
+      <a href="#features" class="btn-secondary">
+        Was kann das Tool?
+        <i data-lucide="chevron-down" width="16" height="16"></i>
+      </a>
+    </div>
+    <p class="hero-note">
+      <i data-lucide="lock" width="13" height="13"></i>
+      Alle Daten bleiben in deinem Browser. Kein Account. Kein Server. Kein Datenleck.
+    </p>
+  </section>
+
+  <!-- Social proof -->
+  <div class="social-bar">
+    <p>Für alle, die ihr Netzwerk ernst nehmen</p>
+    <div class="social-pills">
+      <span class="social-pill">
+        <i data-lucide="briefcase" width="14" height="14"></i>
+        Gründerinnen &amp; Gründer
+      </span>
+      <span class="social-pill">
+        <i data-lucide="trending-up" width="14" height="14"></i>
+        Business Development
+      </span>
+      <span class="social-pill">
+        <i data-lucide="users" width="14" height="14"></i>
+        Netzwerker
+      </span>
+      <span class="social-pill">
+        <i data-lucide="target" width="14" height="14"></i>
+        Sales &amp; Partnerships
+      </span>
+      <span class="social-pill">
+        <i data-lucide="globe" width="14" height="14"></i>
+        Freelancer
+      </span>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <p class="section-label">Was du bekommst</p>
+    <h2 class="section-title">Alles, was du brauchst, um<br/>Beziehungen aktiv zu gestalten</h2>
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <i data-lucide="contact" width="24" height="24"></i>
+        </div>
+        <div class="feature-title">Smarte Kontaktprofile</div>
+        <p class="feature-desc">
+          Name, Firma, Rolle, Beziehungsstärke, Priorität – alles an einem Ort.
+          Ein automatischer Score zeigt dir, wer gerade Aufmerksamkeit braucht.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <i data-lucide="search" width="24" height="24"></i>
+        </div>
+        <div class="feature-title">SmartQuery in deiner Sprache</div>
+        <p class="feature-desc">
+          Frag ganz natürlich: „Wen kenne ich in Berlin?" oder „Wer kann mir bei KI helfen?"
+          Du bekommst eine kontextuelle Antwort und eine Auswahlliste – sofort.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <i data-lucide="map" width="24" height="24"></i>
+        </div>
+        <div class="feature-title">Karten- &amp; Netzwerkansicht</div>
+        <p class="feature-desc">
+          Sieh auf einen Blick, wo deine Kontakte sind und wie sie miteinander verbunden sind.
+          Entdecke Cluster und versteckte Brücken in deinem Netzwerk.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <i data-lucide="layout-dashboard" width="24" height="24"></i>
+        </div>
+        <div class="feature-title">Beziehungs-Dashboard</div>
+        <p class="feature-desc">
+          Erkenne, wen du zu lange nicht kontaktiert hast, sieh offene nächste Schritte
+          und behalte deine Netzwerkaktivität im Blick. Bleib bewusst.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <i data-lucide="trophy" width="24" height="24"></i>
+        </div>
+        <div class="feature-title">Motivation &amp; Gewohnheiten</div>
+        <p class="feature-desc">
+          Verdiene Badges, verfolge deine monatliche Aktivität und baue die Gewohnheit auf,
+          dein Netzwerk kontinuierlich zu pflegen – nicht erst wenn du es brauchst.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <i data-lucide="download" width="24" height="24"></i>
+        </div>
+        <div class="feature-title">Import &amp; Export</div>
+        <p class="feature-desc">
+          Importiere bestehende Kontakte per JSON oder CSV.
+          Exportiere jederzeit. Deine Daten, dein Format, vollständig portabel.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Mid-page Ad -->
+  <div class="ad-mid">
+    <div class="ad-mid-inner">
+      <span class="ad-label">Werbeanzeige</span>
+      728×90 Leaderboard
+    </div>
+  </div>
+
+  <!-- For who -->
+  <section class="forwho-section">
+    <div class="section">
+      <p class="section-label">Für wen ist es gedacht</p>
+      <h2 class="section-title">Dein Netzwerk ist dein Kapital.<br/>Nutze es bewusst.</h2>
+      <div class="forwho-grid">
+
+        <div class="forwho-card">
+          <div class="forwho-icon-wrap">
+            <i data-lucide="building-2" width="24" height="24"></i>
+          </div>
+          <div class="label">Im Job</div>
+          <p class="desc">Entscheider, Stakeholder, Kolleginnen und Kollegen aus anderen Teams – strukturiert und priorisiert.</p>
+        </div>
+
+        <div class="forwho-card">
+          <div class="forwho-icon-wrap">
+            <i data-lucide="rocket" width="24" height="24"></i>
+          </div>
+          <div class="label">Als Gründer:in</div>
+          <p class="desc">Investoren, Advisors, potenzielle Teammitglieder, Partner – behalte im Blick, wer wirklich bewegt.</p>
+        </div>
+
+        <div class="forwho-card">
+          <div class="forwho-icon-wrap">
+            <i data-lucide="globe" width="24" height="24"></i>
+          </div>
+          <div class="label">Im Netzwerk</div>
+          <p class="desc">Konferenzen, Events, Communities – vergiss nie wieder, wen du wo kennengelernt hast und warum es wichtig war.</p>
+        </div>
+
+        <div class="forwho-card">
+          <div class="forwho-icon-wrap">
+            <i data-lucide="home" width="24" height="24"></i>
+          </div>
+          <div class="label">Im Privatleben</div>
+          <p class="desc">Wichtige Beziehungen sind nicht nur beruflich. Behalte ein vollständiges Bild der Menschen, die dir wichtig sind.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy strip -->
+  <div class="privacy-strip">
+    <h3>
+      <i data-lucide="lock" width="22" height="22"></i>
+      Radikal privat – von Anfang an
+    </h3>
+    <p>
+      Stakeholder Map läuft vollständig in deinem Browser. Deine Kontakte verlassen dein Gerät nie –
+      kein Server, keine Cloud, kein Account erforderlich. Nur du siehst deine Daten.
+    </p>
+    <div class="privacy-badges">
+      <span class="privacy-badge">✓ Kein Account</span>
+      <span class="privacy-badge">✓ Kein Tracking</span>
+      <span class="privacy-badge">✓ Nur lokaler Speicher</span>
+      <span class="privacy-badge">✓ In jedem Browser nutzbar</span>
+    </div>
+  </div>
+
+  <!-- CTA block -->
+  <section class="cta-block">
+    <h2>In 30 Sekunden starten. Kostenlos.</h2>
+    <p>
+      Kein Anmelden. Keine Installation. Einfach die App öffnen,
+      ersten Kontakt anlegen und den Unterschied spüren.
+    </p>
+    <a href="stakeholder-manager.html" class="btn-primary">
+      <i data-lucide="rocket" width="20" height="20"></i>
+      Stakeholder Map öffnen
+    </a>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <i data-lucide="handshake" width="18" height="18"></i>
+        Stakeholder Map
+      </div>
+      <div class="footer-links">
+        <a href="stakeholder-manager.html">App öffnen</a>
+        <a href="datenschutz.html">Datenschutz</a>
+        <a href="impressum.html">Impressum</a>
+        <a href="mailto:redrootinnovations@gmail.com">Kontakt</a>
+      </div>
+      <p class="footer-note">
+        © 2026 stakeholdermap.app · Mit
+        <i data-lucide="heart" width="13" height="13" style="fill:#e05c74;stroke:#e05c74"></i>
+        gebaut · Alle Daten bleiben in deinem Browser · v1.0
+      </p>
+    </div>
+  </footer>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
+
+</body>
+</html>

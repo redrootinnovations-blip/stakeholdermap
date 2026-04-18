@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Impressum – Stakeholder Map</title>
+  <meta name="description" content="Impressum und Anbieterkennzeichnung gemäß § 5 TMG der red root GmbH, Betreiberin von stakeholdermap.app." />
+  <meta name="robots" content="index, follow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand-50:#f0f8fa; --brand-100:#d9eef4; --brand-200:#b2dde8;
+      --brand-300:#8ecbd9; --brand-400:#5baec3; --brand-500:#3f96ae;
+      --brand-600:#2d7a93; --brand-700:#25606f; --brand-800:#1e4d5c;
+      --brand-900:#153845;
+      --gray-50:#f9fafb; --gray-100:#f3f4f6; --gray-200:#e5e7eb;
+      --gray-300:#d1d5db; --gray-400:#9ca3af; --gray-500:#6b7280;
+      --gray-600:#4b5563; --gray-700:#374151; --gray-800:#1f2937;
+      --gray-900:#111827;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      color: var(--gray-800);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+    a { color: var(--brand-600); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    [data-lucide] { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+    [data-lucide] svg { display: block; }
+
+    /* Nav */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto;
+      padding: 0 24px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      font-weight: 900; font-size: 1.1rem;
+      color: var(--brand-800); letter-spacing: -0.02em;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo a { color: inherit; }
+    .nav-cta {
+      background: var(--brand-600); color: #fff;
+      font-weight: 700; font-size: 0.875rem;
+      padding: 9px 20px; border-radius: 10px;
+      transition: background 0.18s; white-space: nowrap;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .nav-cta:hover { background: var(--brand-700); text-decoration: none; }
+
+    /* Header */
+    .page-header {
+      padding: 60px 24px 40px;
+      background: linear-gradient(175deg, var(--brand-50) 0%, #fff 100%);
+      border-bottom: 1px solid var(--brand-100);
+      text-align: center;
+    }
+    .page-header .eyebrow {
+      display: inline-block;
+      font-size: 0.78rem; font-weight: 700;
+      color: var(--brand-600);
+      background: var(--brand-50);
+      border: 1px solid var(--brand-200);
+      padding: 4px 14px; border-radius: 999px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 900;
+      color: var(--brand-900);
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+    }
+    .page-header .subtitle {
+      margin-top: 10px;
+      color: var(--gray-500);
+      font-size: 0.95rem;
+    }
+
+    /* Content */
+    .content {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+    .content h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--brand-800);
+      letter-spacing: -0.015em;
+      margin-top: 40px;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .content h2:first-child { margin-top: 0; }
+    .content h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--brand-900);
+      margin-top: 22px;
+      margin-bottom: 8px;
+    }
+    .content p {
+      font-size: 0.95rem;
+      color: var(--gray-700);
+      margin-bottom: 14px;
+    }
+    .content .info-block {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 14px;
+      padding: 22px 26px;
+      margin: 18px 0;
+    }
+    .content .info-block p {
+      margin-bottom: 4px;
+      font-size: 0.95rem;
+    }
+    .content .info-block strong {
+      color: var(--brand-900);
+    }
+    .content .label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--brand-500);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 14px;
+      margin-bottom: 4px;
+    }
+    .content .label:first-child { margin-top: 0; }
+    .content .placeholder {
+      display: inline-block;
+      background: #fff8e1;
+      border: 1px dashed #e0b84a;
+      border-radius: 6px;
+      padding: 1px 8px;
+      font-size: 0.82rem;
+      color: #92660a;
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    }
+    .content ul {
+      margin: 10px 0 14px 22px;
+      color: var(--gray-700);
+      font-size: 0.95rem;
+    }
+    .content ul li { margin-bottom: 6px; }
+
+    .disclaimer-note {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 24px 0;
+      font-size: 0.88rem;
+      color: #78350f;
+    }
+    .disclaimer-note strong { color: #78350f; }
+
+    .last-update {
+      text-align: center;
+      color: var(--gray-400);
+      font-size: 0.82rem;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--gray-100);
+    }
+
+    /* Footer */
+    footer { background: var(--gray-900); color: var(--gray-400); padding: 36px 24px; }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; gap: 16px;
+      align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .footer-logo {
+      font-weight: 900; font-size: 0.95rem; color: #fff;
+      display: flex; align-items: center; gap: 9px;
+    }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    .footer-links a { font-size: 0.82rem; color: var(--gray-400); transition: color 0.15s; }
+    .footer-links a:hover { color: var(--brand-300); text-decoration: none; }
+    .footer-note { font-size: 0.75rem; color: var(--gray-500); width: 100%; margin-top: 12px; }
+
+    @media (max-width: 640px) {
+      .page-header { padding: 48px 20px 32px; }
+      .content { padding: 40px 20px 60px; }
+      .content .info-block { padding: 18px 20px; }
+      .nav-inner { padding: 0 16px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <i data-lucide="handshake" width="22" height="22"></i>
+        <a href="index.html">Stakeholder Map</a>
+      </div>
+      <a href="stakeholder-manager.html" class="nav-cta">
+        Jetzt starten
+        <i data-lucide="arrow-right" width="16" height="16"></i>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <header class="page-header">
+    <div class="eyebrow">Rechtliche Informationen</div>
+    <h1>Impressum</h1>
+    <p class="subtitle">Angaben gemäß § 5 TMG und § 18 MStV</p>
+  </header>
+
+  <!-- Content -->
+  <main class="content">
+
+    <div class="disclaimer-note">
+      <strong>Hinweis zur Vervollständigung:</strong> Die mit gelbem Rahmen markierten Felder
+      (Handelsregisternummer, Umsatzsteuer-ID, Telefonnummer) sind nach der GmbH-Eintragung
+      bzw. Vergabe durch das zuständige Finanzamt zu aktualisieren.
+    </div>
+
+    <h2>Diensteanbieter</h2>
+    <div class="info-block">
+      <span class="label">Unternehmen</span>
+      <p><strong>red root GmbH</strong></p>
+
+      <span class="label">Anschrift</span>
+      <p>
+        Max-Schnös-Weg 17<br/>
+        96148 Baunach<br/>
+        Deutschland
+      </p>
+
+      <span class="label">Vertretungsberechtigter Geschäftsführer</span>
+      <p>Julian von Westberg</p>
+    </div>
+
+    <h2>Kontakt</h2>
+    <div class="info-block">
+      <span class="label">E-Mail</span>
+      <p><a href="mailto:redrootinnovations@gmail.com">redrootinnovations@gmail.com</a></p>
+
+      <span class="label">Telefon</span>
+      <p><span class="placeholder">+49 XXX XXXXXXX</span> <em>(nach Eintragung)</em></p>
+
+      <span class="label">Web</span>
+      <p><a href="https://stakeholdermap.app">stakeholdermap.app</a></p>
+    </div>
+
+    <h2>Registereintrag</h2>
+    <div class="info-block">
+      <span class="label">Handelsregister</span>
+      <p>Amtsgericht Bamberg</p>
+
+      <span class="label">Registernummer</span>
+      <p><span class="placeholder">HRB XXXXX</span> <em>(wird nach Eintragung ergänzt)</em></p>
+    </div>
+
+    <h2>Umsatzsteuer-Identifikationsnummer</h2>
+    <p>
+      Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz:
+      <span class="placeholder">DE XXXXXXXXX</span> <em>(wird nach Vergabe durch das Finanzamt ergänzt)</em>
+    </p>
+
+    <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
+    <div class="info-block">
+      <p>
+        <strong>Julian von Westberg</strong><br/>
+        red root GmbH<br/>
+        Max-Schnös-Weg 17<br/>
+        96148 Baunach
+      </p>
+    </div>
+
+    <h2>EU-Streitschlichtung</h2>
+    <p>
+      Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:
+      <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener noreferrer">https://ec.europa.eu/consumers/odr/</a>.
+      Unsere E-Mail-Adresse finden Sie oben im Impressum.
+    </p>
+
+    <h2>Verbraucherstreitbeilegung / Universalschlichtungsstelle</h2>
+    <p>
+      Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer
+      Verbraucherschlichtungsstelle teilzunehmen.
+    </p>
+
+    <h2>Haftung für Inhalte</h2>
+    <p>
+      Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten
+      nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als
+      Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen
+      zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.
+    </p>
+    <p>
+      Verpflichtungen zur Entfernung oder Sperrung der Nutzung von Informationen nach den
+      allgemeinen Gesetzen bleiben hiervon unberührt. Eine diesbezügliche Haftung ist jedoch erst
+      ab dem Zeitpunkt der Kenntnis einer konkreten Rechtsverletzung möglich. Bei Bekanntwerden
+      von entsprechenden Rechtsverletzungen werden wir diese Inhalte umgehend entfernen.
+    </p>
+
+    <h2>Haftung für Links</h2>
+    <p>
+      Unser Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen
+      Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen.
+      Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der
+      Seiten verantwortlich. Die verlinkten Seiten wurden zum Zeitpunkt der Verlinkung auf
+      mögliche Rechtsverstöße überprüft. Rechtswidrige Inhalte waren zum Zeitpunkt der
+      Verlinkung nicht erkennbar.
+    </p>
+    <p>
+      Eine permanente inhaltliche Kontrolle der verlinkten Seiten ist jedoch ohne konkrete
+      Anhaltspunkte einer Rechtsverletzung nicht zumutbar. Bei Bekanntwerden von Rechtsverletzungen
+      werden wir derartige Links umgehend entfernen.
+    </p>
+
+    <h2>Urheberrecht</h2>
+    <p>
+      Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen
+      dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der
+      Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung
+      des jeweiligen Autors bzw. Erstellers. Downloads und Kopien dieser Seite sind nur für den
+      privaten, nicht kommerziellen Gebrauch gestattet.
+    </p>
+    <p>
+      Soweit die Inhalte auf dieser Seite nicht vom Betreiber erstellt wurden, werden die
+      Urheberrechte Dritter beachtet. Insbesondere werden Inhalte Dritter als solche gekennzeichnet.
+      Sollten Sie trotzdem auf eine Urheberrechtsverletzung aufmerksam werden, bitten wir um einen
+      entsprechenden Hinweis. Bei Bekanntwerden von Rechtsverletzungen werden wir derartige Inhalte
+      umgehend entfernen.
+    </p>
+
+    <h2>Bildnachweise und Icons</h2>
+    <p>
+      Die auf dieser Website verwendeten Icons stammen aus der Open-Source-Bibliothek
+      <a href="https://lucide.dev" target="_blank" rel="noopener noreferrer">Lucide</a>
+      (ISC-Lizenz). Die verwendete Schriftart <em>Inter</em> wird über Google Fonts bereitgestellt
+      (Open Font License).
+    </p>
+
+    <p class="last-update">
+      Stand: April 2026 · v1.0
+    </p>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <i data-lucide="handshake" width="18" height="18"></i>
+        Stakeholder Map
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Startseite</a>
+        <a href="stakeholder-manager.html">App öffnen</a>
+        <a href="datenschutz.html">Datenschutz</a>
+        <a href="impressum.html">Impressum</a>
+      </div>
+      <p class="footer-note">
+        © 2026 stakeholdermap.app · red root GmbH · Alle Daten bleiben in deinem Browser · v1.0
+      </p>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
+
+</body>
+</html>
