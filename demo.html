@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🤝 Stakeholder Manager – Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#f0f8fa', 100: '#d9eef4', 200: '#b2dde8',
+              300: '#8ecbd9', 400: '#5baec3', 500: '#3f96ae',
+              600: '#2d7a93', 700: '#25606f', 800: '#1e4d5c', 900: '#153845',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f0f7fa; }
+    ::-webkit-scrollbar-thumb { background: #8ecbd9; border-radius: 3px; }
+    .leaflet-container { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .leaflet-popup-content-wrapper { border-radius: 12px !important; }
+    .leaflet-popup-content { margin: 12px 16px !important; }
+    .sm-marker { display:flex; align-items:center; justify-content:center; font-weight:700;
+      border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+      font-family: -apple-system, sans-serif; cursor: pointer; transition: transform .15s; }
+    .sm-marker:hover { transform: scale(1.15); }
+    .d3-tooltip { position: fixed; background: white; border: 1px solid #c5dfe8;
+      box-shadow: 0 4px 16px rgba(30,77,92,.12); border-radius: 8px; padding: 10px 14px;
+      pointer-events: none; z-index: 9999; font-family: -apple-system, sans-serif; min-width: 160px; }
+    .node-label { font-family: -apple-system, sans-serif; pointer-events: none; }
+    .demo-banner { background: linear-gradient(135deg, #2d7a93, #25606f); color: white; padding: 16px 20px; text-align: center; font-weight: 500; }
+    .demo-banner-btn { background: white; color: #2d7a93; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block; margin-left: 16px; }
+    .demo-footer { background: #f0f8fa; border-top: 1px solid #dde8ec; padding: 12px 20px; text-align: center; font-size: 12px; color: #5baec3; }
+
+    /* ── Mobile / Phone styles ─────────────────────────────────────────── */
+    @media (max-width: 639px) {
+      .sm-hide   { display: none !important; }
+      .sm-only   { display: flex !important; }
+      .sm-block  { display: block !important; }
+      .sm-full   { width: 100% !important; }
+      /* Give space for the sticky bottom nav */
+      .main-content { padding-bottom: 80px !important; }
+      /* Bottom nav */
+      .bottom-nav {
+        display: flex !important;
+        position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+        background: white; border-top: 1px solid #dde8ec;
+        box-shadow: 0 -2px 12px rgba(30,77,92,.1);
+        padding: 6px 4px env(safe-area-inset-bottom, 4px);
+      }
+      /* Floating action button */
+      .fab {
+        display: flex !important;
+        position: fixed; bottom: 74px; right: 16px; z-index: 51;
+        width: 52px; height: 52px; border-radius: 50%;
+        background: #2d7a93; color: white;
+        font-size: 24px; font-weight: bold;
+        align-items: center; justify-content: center;
+        box-shadow: 0 4px 16px rgba(45,122,147,.4);
+        border: none; cursor: pointer;
+      }
+      /* Single-column form grids */
+      .mobile-grid-1 { grid-template-columns: 1fr !important; }
+      /* Compact header */
+      .header-subtitle { display: none !important; }
+      .header-actions-text { display: none !important; }
+      /* Mobile demo banner */
+      .demo-banner { flex-direction: column; padding: 12px 16px; }
+      .demo-banner-btn { margin-left: 0; margin-top: 8px; display: block; width: 100%; }
+    }
+    @media (min-width: 640px) {
+      .bottom-nav { display: none !important; }
+      .fab        { display: none !important; }
+      .sm-only    { display: none !important; }
+      .demo-banner { display: flex; align-items: center; justify-content: space-between; }
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // ─── Geocoding Cache (persists across React re-renders) ─────────────────
+    if (!window._geoCache) window._geoCache = {};
+    let _geoDelay = 0;
+
+    const geocodeCity = async (city) => {
+      if (!city || !city.trim()) return null;
+      const key = city.trim().toLowerCase();
+      if (window._geoCache[key] !== undefined) return window._geoCache[key];
+      _geoDelay += 650;
+      await new Promise(r => setTimeout(r, _geoDelay));
+      _geoDelay = Math.max(0, _geoDelay - 650);
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city + ", Deutschland")}&format=json&limit=1&accept-language=de`;
+        const resp = await fetch(url);
+        if (!resp.ok) { window._geoCache[key] = null; return null; }
+        const data = await resp.json();
+        if (data.length > 0) {
+          const c = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          window._geoCache[key] = c;
+          return c;
+        }
+      } catch {}
+      window._geoCache[key] = null;
+      return null;
+    };
+
+    // ─── Utilities ──────────────────────────────────────────────────────────
+    const generateId = () => Math.random().toString(36).substr(2,9) + Date.now().toString(36);
+
+    const calculateScore = (c) => {
+      let s = 0;
+      s += (c.beziehungsstaerke || 1) * 4;
+      if (c.prioritaet === "hoch") s += 20;
+      else if (c.prioritaet === "mittel") s += 10;
+      else if (c.prioritaet === "niedrig") s += 5;
+      if (c.letzterKontakt) {
+        const d = Math.floor((new Date() - new Date(c.letzterKontakt)) / 86400000);
+        if (d < 30) s += 20; else if (d < 90) s += 10; else if (d < 180) s += 5;
+      }
+      ["email","telefon","linkedin","firma","rolle"].forEach(f => { if (c[f]) s += 4; });
+      if (c.naechsteAktion) s += 10;
+      if (c.tags && c.tags.length > 0) s += 5;
+      if (c.notizen) s += 5;
+      return Math.min(s, 100);
+    };
+
+    const parseIntelligentText = (text) => {
+      const u = {};
+      const emailM = text.match(/[\w.+-]+@[\w.-]+\.\w+/);
+      if (emailM) u.email = emailM[0];
+      const phoneM = text.match(/(\+?\d[\d\s\-().]{6,}\d)/);
+      if (phoneM) u.telefon = phoneM[0].trim();
+      const liM = text.match(/linkedin\.com\/in\/([\w-]+)/i);
+      if (liM) u.linkedin = "https://linkedin.com/in/" + liM[1];
+      const coM = text.match(/(?:bei|von|@|at)\s+([A-ZÄÖÜ][^\s,.\n]{1,30}(?:\s[A-ZÄÖÜ][^\s,.\n]{1,20})?)/);
+      if (coM) u.firma = coM[1].trim();
+      const wohnM = text.match(/(?:wohnt in|lebt in|wohnhaft in|wohnort:)\s+([A-ZÄÖÜa-zäöü][^\s,.\n]{2,25})/i);
+      if (wohnM) u.wohnort = wohnM[1].trim();
+      const arbM = text.match(/(?:arbeitet in|büro in|office in|sitzt in|arbeitsort:)\s+([A-ZÄÖÜa-zäöü][^\s,.\n]{2,25})/i);
+      if (arbM) u.arbeitsort = arbM[1].trim();
+      const roles = ["CEO","CTO","COO","CFO","CMO","CPO","Founder","Co-Founder","Gründer","Director","Manager","VP","Head of","Lead","Partner","Investor","Angel","Berater","Consultant","Freelancer","Developer","Designer","Engineer","Geschäftsführer","Vorstand"];
+      for (const r of roles) { if (text.toLowerCase().includes(r.toLowerCase())) { u.rolle = r; break; } }
+      const lt = text.toLowerCase();
+      if (["sehr gut","enge","alter freund","langjährig","vertrauen","mentor","bester"].some(w => lt.includes(w))) u.beziehungsstaerke = 5;
+      else if (["gut befreundet","kenne ihn gut","kenne sie gut"].some(w => lt.includes(w))) u.beziehungsstaerke = 4;
+      else if (["kenne","bekannt","kollege","netzwerk","verbunden"].some(w => lt.includes(w))) u.beziehungsstaerke = 3;
+      else if (["flüchtig","oberflächlich","neu","kaum"].some(w => lt.includes(w))) u.beziehungsstaerke = 1;
+      if (["sehr wichtig","key contact","kritisch","prio 1","unbedingt","investor","schlüsselkontakt"].some(w => lt.includes(w))) u.prioritaet = "hoch";
+      else if (["wichtig","relevant","interessant"].some(w => lt.includes(w))) u.prioritaet = "mittel";
+      else if (["optional","später","unwichtig"].some(w => lt.includes(w))) u.prioritaet = "niedrig";
+      const dM = text.match(/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/);
+      if (dM) {
+        const d = dM[1].padStart(2,"0"), m = dM[2].padStart(2,"0");
+        const y = dM[3].length === 2 ? "20"+dM[3] : dM[3];
+        u.letzterKontakt = `${y}-${m}-${d}`;
+      }
+      const aM = text.match(/(anrufen|schreiben|treffen|kontaktieren|follow.?up|nachfassen|einladen|anfragen)[^.!?\n]{0,60}/i);
+      if (aM) u.naechsteAktion = aM[0].trim();
+      const tagM = text.match(/#([\w\-äöüÄÖÜ]+)/g);
+      if (tagM) u.tags = tagM.map(t => t.slice(1));
+      return u;
+    };
+
+    const EMPTY_CONTACT = {
+      name:"", firma:"", rolle:"", email:"", telefon:"", linkedin:"",
+      wohnort:"", arbeitsort:"",
+      beziehungsstaerke:3, prioritaet:"mittel", letzterKontakt:"",
+      naechsteAktion:"", tags:[], notizen:"", kontakthistorie:[],
+      verbindungen:[], freifeld:"", score:0,
+    };
+
+    const PRIO_STYLE = {
+      hoch:"bg-red-100 text-red-700 border-red-200",
+      mittel:"bg-amber-100 text-amber-700 border-amber-200",
+      niedrig:"bg-green-100 text-green-700 border-green-200"
+    };
+    const PRIO_BAR = { hoch:"bg-red-400", mittel:"bg-amber-400", niedrig:"bg-green-400" };
+    const PRIO_DOT = { hoch:"bg-red-500", mittel:"bg-amber-500", niedrig:"bg-green-500" };
+    const PRIO_HEX = { hoch:"#f87171", mittel:"#fbbf24", niedrig:"#4ade80" };
+
+    // ─── Inline SVG Icon Component (Lucide-style) ───────────────────────────
+    const ICO = {
+      handshake: <><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-1"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></>,
+      table:     <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>,
+      grid:      <><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></>,
+      map:       <><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></>,
+      network:   <><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></>,
+      dashboard: <><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></>,
+      download:  <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>,
+      upload:    <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></>,
+      settings:  <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>,
+      contact:   <><path d="M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2"/><rect width="18" height="18" x="3" y="4" rx="2"/><circle cx="12" cy="10" r="2"/><line x1="8" x2="8" y1="2" y2="4"/><line x1="16" x2="16" y1="2" y2="4"/></>,
+      search:    <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
+      rocket:    <><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></>,
+      users:     <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+      target:    <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
+      logout:    <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></>,
+    };
+    const Ico = ({ n, size=16, style={}, className="" }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        className={className} style={{display:"inline-block",verticalAlign:"middle",flexShrink:0,...style}}>
+        {ICO[n] || null}
+      </svg>
+    );
+
+    // ─── Reusable Components ────────────────────────────────────────────────
+    const ScoreBadge = ({ score }) => {
+      const color = score >= 70 ? "bg-brand-600" : score >= 40 ? "bg-brand-400" : "bg-brand-200";
+      return (
+        <div className="flex items-center gap-2">
+          <div className="w-20 bg-gray-200 rounded-full h-2 flex-shrink-0">
+            <div className={`${color} h-2 rounded-full`} style={{width:`${score}%`}} />
+          </div>
+          <span className="text-xs font-semibold text-gray-600 w-8">{score}</span>
+        </div>
+      );
+    };
+
+    const Stars = ({ value, onChange, readonly=false }) => (
+      <div className="flex gap-0.5">
+        {[1,2,3,4,5].map(s => (
+          <button key={s} type="button" onClick={() => !readonly && onChange?.(s)}
+            className={`text-xl leading-none ${s<=value?"text-amber-400":"text-gray-200"} ${!readonly?"hover:text-amber-300 cursor-pointer":"cursor-default"}`}>★</button>
+        ))}
+      </div>
+    );
+
+    const TagInput = ({ tags, onChange }) => {
+      const [input, setInput] = useState("");
+      const add = (e) => {
+        if ((e.key==="Enter"||e.key===",") && input.trim()) {
+          e.preventDefault();
+          if (!tags.includes(input.trim())) onChange([...tags, input.trim()]);
+          setInput("");
+        }
+      };
+      return (
+        <div className="flex flex-wrap gap-1.5 border rounded-xl p-2 min-h-[42px] focus-within:ring-2 focus-within:ring-blue-400 bg-white">
+          {tags.map(t => (
+            <span key={t} className="bg-brand-100 text-brand-700 text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-medium">
+              {t}<button type="button" onClick={() => onChange(tags.filter(x => x!==t))} className="hover:text-blue-900 font-bold ml-0.5">×</button>
+            </span>
+          ))}
+          <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={add}
+            placeholder={tags.length===0?"Tag hinzufügen und Enter drücken…":""}
+            className="outline-none text-sm flex-1 min-w-[120px] bg-transparent" />
+        </div>
+      );
+    };
+
+    // ─── Verbindungs-Manager ────────────────────────────────────────────────
+    const VerbindungsManager = ({ verbindungen, onChange, allContacts, currentId }) => {
+      const [selId, setSelId] = useState("");
+      const [selTyp, setSelTyp] = useState("kennt");
+      const [notiz, setNotiz] = useState("");
+      const available = allContacts.filter(c => c.id !== currentId && !verbindungen.find(v => v.kontaktId===c.id));
+      const add = () => {
+        if (!selId) return;
+        onChange([...verbindungen, {kontaktId:selId, typ:selTyp, notiz}]);
+        setSelId(""); setNotiz("");
+      };
+      return (
+        <div className="space-y-4">
+          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+            <p className="text-sm font-semibold text-gray-700">Verbindung hinzufügen</p>
+            <select value={selId} onChange={e => setSelId(e.target.value)}
+              className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400 bg-white">
+              <option value="">Kontakt auswählen…</option>
+              {available.map(c => <option key={c.id} value={c.id}>{c.name}{c.firma?` (${c.firma})`:""}</option>)}
+            </select>
+            <div className="flex gap-2">
+              <select value={selTyp} onChange={e => setSelTyp(e.target.value)}
+                className="border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400 bg-white">
+                {["kennt","arbeitet mit","empfohlen von","Kollege","Investor","Mentor","Freund","Partner","Kunde","Konkurrent"].map(t => <option key={t}>{t}</option>)}
+              </select>
+              <input value={notiz} onChange={e => setNotiz(e.target.value)} placeholder="Notiz (optional)"
+                className="flex-1 border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400" />
+              <button onClick={add} disabled={!selId}
+                className="bg-brand-600 text-white px-4 py-2.5 rounded-xl hover:bg-brand-700 disabled:opacity-40 font-bold text-sm">+</button>
+            </div>
+          </div>
+          {verbindungen.length===0 ? (
+            <div className="text-center py-10 text-gray-300">
+              <div className="text-4xl mb-2">🔗</div><p className="text-sm">Noch keine Verbindungen</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {verbindungen.map((v,i) => {
+                const k = allContacts.find(c => c.id===v.kontaktId);
+                if (!k) return null;
+                return (
+                  <div key={i} className="bg-white border rounded-xl p-3.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm text-gray-800">{k.name}</span>
+                      <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-medium">{v.typ}</span>
+                      {v.notiz && <span className="text-gray-400 text-xs">({v.notiz})</span>}
+                    </div>
+                    <button onClick={() => onChange(verbindungen.filter((_,j) => j!==i))}
+                      className="text-gray-300 hover:text-red-500 text-xl ml-2">×</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ─── Duplicate Detection helpers ─────────────────────────────────────────
+    const TITLES = /\b(dr\.?|prof\.?|dipl\.?|ing\.?|mag\.?|m\.sc\.?|b\.sc\.?|mba\.?|h\.c\.?|ph\.d\.?|jr\.?|sr\.?)\s*/gi;
+
+    const normalizeName = (name) =>
+      name.toLowerCase()
+        .replace(TITLES, "")
+        .replace(/['\-_.,!?]/g, "")
+        .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
+        .replace(/\s+/g," ").trim();
+
+    const levenshtein = (a, b) => {
+      const m = a.length, n = b.length;
+      if (!m) return n; if (!n) return m;
+      const row = Array.from({length: n+1}, (_,i) => i);
+      for (let i = 1; i <= m; i++) {
+        let prev = i;
+        for (let j = 1; j <= n; j++) {
+          const val = a[i-1]===b[j-1] ? row[j-1] : 1+Math.min(row[j-1], row[j], prev);
+          row[j-1] = prev; prev = val;
+        }
+        row[n] = prev;
+      }
+      return row[n];
+    };
+
+    const findDuplicates = (name, contacts, currentId) => {
+      if (!name || name.trim().length < 2) return [];
+      const norm = normalizeName(name);
+      if (norm.length < 2) return [];
+      return contacts
+        .filter(c => c.id !== currentId && c.name)
+        .map(c => {
+          const cn = normalizeName(c.name);
+          const dist = levenshtein(norm, cn);
+          const maxLen = Math.max(norm.length, cn.length);
+          const sim = maxLen > 0 ? 1 - dist / maxLen : 0;
+          return { contact: c, sim, dist };
+        })
+        .filter(r => r.sim >= 0.72 || r.dist <= 2)
+        .sort((a, b) => b.sim - a.sim)
+        .slice(0, 3);
+    };
+
+    // Helper: days ago date calculation
+    const daysAgo = (n) => {
+      const d = new Date();
+      d.setDate(d.getDate() - n);
+      return d.toISOString().slice(0, 10);
+    };
+
+    // ─── DEMO CONTACT GENERATOR ───────────────────────────────────────────────
+    const generateDemoContacts = () => {
+      const days = (n) => daysAgo(n);
+      const contacts = [
+        // Professional / Business (12)
+        {
+          id: generateId(),
+          name: "Dr. Markus Weber",
+          firma: "Autohaus Weber GmbH",
+          rolle: "Geschäftsführer",
+          email: "markus.weber@autohaus-weber.de",
+          telefon: "+49 89 5234567",
+          linkedin: "https://linkedin.com/in/markus-weber",
+          wohnort: "München",
+          arbeitsort: "München",
+          wohnort_lat: 48.1351,
+          wohnort_lng: 11.5820,
+          arbeitsort_lat: 48.1351,
+          arbeitsort_lng: 11.5820,
+          beziehungsstaerke: 5,
+          prioritaet: "hoch",
+          letzterKontakt: days(3),
+          naechsteAktion: "Zum Geschäftsessen einladen",
+          tags: ["Kunde","Automotive","Entscheider"],
+          notizen: "Langjähriger Geschäftspartner, trifft alle strategischen Entscheidungen. Sehr zuverlässig.",
+          kontakthistorie: [
+            { datum: new Date(new Date().setDate(new Date().getDate()-3)).toISOString(), text: "Telefonkonferenz - positive Feedback zum Q2 Proposal" }
+          ],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Sandra Hoffmann",
+          firma: "Siemens Energy",
+          rolle: "Head of HR",
+          email: "sandra.hoffmann@siemens-energy.com",
+          telefon: "+49 9131 1234567",
+          linkedin: "https://linkedin.com/in/sandra-hoffmann",
+          wohnort: "Erlangen",
+          arbeitsort: "Erlangen",
+          wohnort_lat: 49.5897,
+          wohnort_lng: 11.0078,
+          arbeitsort_lat: 49.5897,
+          arbeitsort_lng: 11.0078,
+          beziehungsstaerke: 4,
+          prioritaet: "hoch",
+          letzterKontakt: days(7),
+          naechsteAktion: "Zum HR-Tech Netzwerktreffen einladen",
+          tags: ["HR","Konzern","Netzwerk"],
+          notizen: "Kennengelernt auf HR-Messe. Guter Draht zum HR-Tech Ökosystem.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Thomas Bergmann",
+          firma: "Bergmann Consulting",
+          rolle: "Inhaber",
+          email: "thomas@bergmann-consulting.de",
+          telefon: "+49 711 6234567",
+          linkedin: "https://linkedin.com/in/thomas-bergmann-consulting",
+          wohnort: "Stuttgart",
+          arbeitsort: "Stuttgart",
+          wohnort_lat: 48.7758,
+          wohnort_lng: 9.1829,
+          arbeitsort_lat: 48.7758,
+          arbeitsort_lng: 9.1829,
+          beziehungsstaerke: 4,
+          prioritaet: "mittel",
+          letzterKontakt: days(14),
+          naechsteAktion: "Follow-up zum Referral Prozess",
+          tags: ["Beratung","Partner","Empfehlung"],
+          notizen: "Empfiehlt regelmäßig neue Kontakte. Wichtiger Multiplikator im Netzwerk.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Lisa Chen",
+          firma: "DataFlow AI",
+          rolle: "CTO",
+          email: "lisa.chen@dataflow-ai.de",
+          telefon: "+49 30 5678901",
+          linkedin: "https://linkedin.com/in/lisa-chen-ai",
+          wohnort: "Berlin",
+          arbeitsort: "Berlin",
+          wohnort_lat: 52.5200,
+          wohnort_lng: 13.4050,
+          arbeitsort_lat: 52.5200,
+          arbeitsort_lng: 13.4050,
+          beziehungsstaerke: 3,
+          prioritaet: "hoch",
+          letzterKontakt: days(21),
+          naechsteAktion: "Kooperationsgespräch zum KI-Projekt vorbereiten",
+          tags: ["Tech","KI","Startup"],
+          notizen: "Potenzielle Kooperationspartnerin für KI-Projekt. Starke technische Expertise.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Prof. Dr. Hans-Peter Müller",
+          firma: "TU München",
+          rolle: "Lehrstuhl für BWL",
+          email: "h.mueller@tum.de",
+          telefon: "+49 89 2891234",
+          linkedin: "https://linkedin.com/in/prof-mueller-tum",
+          wohnort: "München",
+          arbeitsort: "München",
+          wohnort_lat: 48.1351,
+          wohnort_lng: 11.5820,
+          arbeitsort_lat: 48.1351,
+          arbeitsort_lng: 11.5820,
+          beziehungsstaerke: 3,
+          prioritaet: "mittel",
+          letzterKontakt: days(60),
+          naechsteAktion: "Zum Vortrag in der Vorlesung einladen",
+          tags: ["Akademie","Forschung","Mentor"],
+          notizen: "Ehemaliger Doktorvater. Gelegentliche fachliche Austausche. Wertvoll für Perspektiven.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Katharina Braun",
+          firma: "Genusswerkstatt",
+          rolle: "Geschäftsführerin",
+          email: "katharina@genusswerkstatt.de",
+          telefon: "+49 911 3234567",
+          linkedin: "https://linkedin.com/in/katharina-braun-gastro",
+          wohnort: "Nürnberg",
+          arbeitsort: "Nürnberg",
+          wohnort_lat: 49.4521,
+          wohnort_lng: 11.0767,
+          arbeitsort_lat: 49.4521,
+          arbeitsort_lng: 11.0767,
+          beziehungsstaerke: 4,
+          prioritaet: "hoch",
+          letzterKontakt: days(5),
+          naechsteAktion: "Catering für Kundenevents buchen",
+          tags: ["Gastronomie","Partnerin","Catering"],
+          notizen: "Betreibt drei Restaurants. Sehr zuverlässig und kreativ. Top-Qualität.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Michael Schwarz",
+          firma: "MunichVentures",
+          rolle: "Investor",
+          email: "michael@munichventures.de",
+          telefon: "+49 89 8234567",
+          linkedin: "https://linkedin.com/in/michael-schwarz-vc",
+          wohnort: "München",
+          arbeitsort: "München",
+          wohnort_lat: 48.1351,
+          wohnort_lng: 11.5820,
+          arbeitsort_lat: 48.1351,
+          arbeitsort_lng: 11.5820,
+          beziehungsstaerke: 2,
+          prioritaet: "hoch",
+          letzterKontakt: days(30),
+          naechsteAktion: "Pitch Presentation vorbereiten",
+          tags: ["Investor","VC","Kapital"],
+          notizen: "Empfohlen von Thomas. Noch im Aufbauprozess der Beziehung. Großes Potenzial.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Dr. Julia Richter",
+          firma: "Kanzlei Richter & Partner",
+          rolle: "Rechtsanwältin",
+          email: "julia.richter@kanzlei-richter.de",
+          telefon: "+49 89 3234567",
+          linkedin: "https://linkedin.com/in/dr-julia-richter",
+          wohnort: "München",
+          arbeitsort: "München",
+          wohnort_lat: 48.1351,
+          wohnort_lng: 11.5820,
+          arbeitsort_lat: 48.1351,
+          arbeitsort_lng: 11.5820,
+          beziehungsstaerke: 4,
+          prioritaet: "mittel",
+          letzterKontakt: days(45),
+          naechsteAktion: "Vertragsreviews durchsprechen",
+          tags: ["Recht","Verträge","DSGVO"],
+          notizen: "Betreut alle Vertragsfragen und DSGVO-Compliance. Sehr gründlich und zuverlässig.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Andreas Bauer",
+          firma: "Stadtwerke Augsburg",
+          rolle: "IT-Leiter",
+          email: "a.bauer@stadtwerke-augsburg.de",
+          telefon: "+49 821 5234567",
+          linkedin: "https://linkedin.com/in/andreas-bauer-it",
+          wohnort: "Augsburg",
+          arbeitsort: "Augsburg",
+          wohnort_lat: 48.3705,
+          wohnort_lng: 10.8978,
+          arbeitsort_lat: 48.3705,
+          arbeitsort_lng: 10.8978,
+          beziehungsstaerke: 3,
+          prioritaet: "mittel",
+          letzterKontakt: days(90),
+          naechsteAktion: "Digitalisierungslösung demo-n",
+          tags: ["IT","Öffentlich","Digitalisierung"],
+          notizen: "Interessiert an modernen Digitalisierungslösungen. Großes Budget für 2026.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Petra Schneider",
+          firma: "Schneider Marketing",
+          rolle: "Inhaberin",
+          email: "petra@schneider-marketing.de",
+          telefon: "+49 941 3234567",
+          linkedin: "https://linkedin.com/in/petra-schneider-marketing",
+          wohnort: "Regensburg",
+          arbeitsort: "Regensburg",
+          wohnort_lat: 49.0134,
+          wohnort_lng: 12.1016,
+          arbeitsort_lat: 49.0134,
+          arbeitsort_lng: 12.1016,
+          beziehungsstaerke: 3,
+          prioritaet: "niedrig",
+          letzterKontakt: days(120),
+          naechsteAktion: "Brand Refresh Gespräch führen",
+          tags: ["Marketing","Freelance","Kreativ"],
+          notizen: "Hat Website und Branding gemacht. Sehr kreativ und pünktlich. Good Rates.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Frank Zimmermann",
+          firma: "TechParts AG",
+          rolle: "Vertriebsleiter",
+          email: "frank.zimmermann@techparts.de",
+          telefon: "+49 841 7234567",
+          linkedin: "https://linkedin.com/in/frank-zimmermann-sales",
+          wohnort: "Ingolstadt",
+          arbeitsort: "Ingolstadt",
+          wohnort_lat: 48.7665,
+          wohnort_lng: 11.4258,
+          arbeitsort_lat: 48.7665,
+          arbeitsort_lng: 11.4258,
+          beziehungsstaerke: 2,
+          prioritaet: "mittel",
+          letzterKontakt: days(35),
+          naechsteAktion: "Automotive Supply Chain Session",
+          tags: ["Vertrieb","Automotive","Zulieferer"],
+          notizen: "Neuer Kontakt von IHK-Event. Gute Connections in der Automotive-Industrie.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Carla Rossi",
+          firma: "EcoPackaging",
+          rolle: "Gründerin",
+          email: "carla@ecopackaging.de",
+          telefon: "+49 89 9234567",
+          linkedin: "https://linkedin.com/in/carla-rossi-eco",
+          wohnort: "München",
+          arbeitsort: "München",
+          wohnort_lat: 48.1351,
+          wohnort_lng: 11.5820,
+          arbeitsort_lat: 48.1351,
+          arbeitsort_lng: 11.5820,
+          beziehungsstaerke: 3,
+          prioritaet: "mittel",
+          letzterKontakt: days(18),
+          naechsteAktion: "Co-Working Networking Event",
+          tags: ["Startup","Nachhaltigkeit","Gründerin"],
+          notizen: "Im gleichen Co-Working Space. Starke Vision für nachaltige Verpackungen.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+
+        // Personal / Friends (8)
+        {
+          id: generateId(),
+          name: "Stefan Huber",
+          firma: "",
+          rolle: "Bester Freund",
+          email: "stefan.huber@email.de",
+          telefon: "+49 89 1234567",
+          linkedin: "",
+          wohnort: "Freising",
+          arbeitsort: "Freising",
+          wohnort_lat: 48.4028,
+          wohnort_lng: 11.7489,
+          arbeitsort_lat: 48.4028,
+          arbeitsort_lng: 11.7489,
+          beziehungsstaerke: 5,
+          prioritaet: "hoch",
+          letzterKontakt: days(2),
+          naechsteAktion: "Tennis spielen Mittwoch",
+          tags: ["Freund","Vertrauen","Sport"],
+          notizen: "Kennen uns seit der Schulzeit. Absolut vertrauenswürdig. Regelmäßige Treffen.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Maria Kowalski",
+          firma: "",
+          rolle: "Nachbarin",
+          email: "maria.kowalski@email.de",
+          telefon: "+49 89 2234567",
+          linkedin: "",
+          wohnort: "Garching",
+          arbeitsort: "Garching",
+          wohnort_lat: 48.2489,
+          wohnort_lng: 11.6530,
+          arbeitsort_lat: 48.2489,
+          arbeitsort_lng: 11.6530,
+          beziehungsstaerke: 4,
+          prioritaet: "niedrig",
+          letzterKontakt: days(8),
+          naechsteAktion: "Gartenbesuch am Wochenende",
+          tags: ["Nachbar","Hilfe","Garten"],
+          notizen: "Hilft mit Kinderbetreuung. Sehr nett und zuverlässig. Nachbarschaftlich toll.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Dr. Florian Meier",
+          firma: "Zahnarztpraxis Meier",
+          rolle: "Zahnarzt",
+          email: "florian.meier@zahnarzt-freising.de",
+          telefon: "+49 8161 7234567",
+          linkedin: "",
+          wohnort: "Freising",
+          arbeitsort: "Freising",
+          wohnort_lat: 48.4028,
+          wohnort_lng: 11.7489,
+          arbeitsort_lat: 48.4028,
+          arbeitsort_lng: 11.7489,
+          beziehungsstaerke: 4,
+          prioritaet: "niedrig",
+          letzterKontakt: days(25),
+          naechsteAktion: "Zahnarzttermin buchen",
+          tags: ["Freund","Gesundheit"],
+          notizen: "Alter Studienfreund. Privat und beruflich ein guter Ansprechpartner.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Sabine Kraus",
+          firma: "",
+          rolle: "Freundin der Partnerin",
+          email: "sabine.kraus@email.de",
+          telefon: "+49 89 3234567",
+          linkedin: "",
+          wohnort: "Dachau",
+          arbeitsort: "Dachau",
+          wohnort_lat: 48.2603,
+          wohnort_lng: 11.4340,
+          arbeitsort_lat: 48.2603,
+          arbeitsort_lng: 11.4340,
+          beziehungsstaerke: 3,
+          prioritaet: "niedrig",
+          letzterKontakt: days(12),
+          naechsteAktion: "Nächsten Spieleabend vereinbaren",
+          tags: ["Freundin","Familie","Kochen"],
+          notizen: "Regelmäßige Spieleabende. Großartige Köchin. Freundlich und lustig.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Jürgen Winkler",
+          firma: "",
+          rolle: "Tennispartner",
+          email: "juergen.winkler@email.de",
+          telefon: "+49 89 4234567",
+          linkedin: "",
+          wohnort: "Garching",
+          arbeitsort: "Garching",
+          wohnort_lat: 48.2489,
+          wohnort_lng: 11.6530,
+          arbeitsort_lat: 48.2489,
+          arbeitsort_lng: 11.6530,
+          beziehungsstaerke: 4,
+          prioritaet: "niedrig",
+          letzterKontakt: days(4),
+          naechsteAktion: "Nächsten Mittwoch Tennis spielen",
+          tags: ["Sport","Tennis","Freizeit"],
+          notizen: "Jeden Mittwoch Tennis. Sehr zuverlässig und humorvoll.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Elena Popov",
+          firma: "PopovConsulting",
+          rolle: "Gründerin",
+          email: "elena@popov-consulting.de",
+          telefon: "+49 40 5234567",
+          linkedin: "https://linkedin.com/in/elena-popov",
+          wohnort: "Hamburg",
+          arbeitsort: "Hamburg",
+          wohnort_lat: 53.5511,
+          wohnort_lng: 9.9937,
+          arbeitsort_lat: 53.5511,
+          arbeitsort_lng: 9.9937,
+          beziehungsstaerke: 3,
+          prioritaet: "mittel",
+          letzterKontakt: days(45),
+          naechsteAktion: "Video call vereinbaren",
+          tags: ["ExKollege","Remote","Austausch"],
+          notizen: "Ex-Kollegin von Porsche. Jetzt selbständig und Remote in Hamburg.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Max Gruber",
+          firma: "Gruber Elektrotechnik",
+          rolle: "Elektriker",
+          email: "max.gruber@email.de",
+          telefon: "+49 8031 3234567",
+          linkedin: "",
+          wohnort: "Rosenheim",
+          arbeitsort: "Rosenheim",
+          wohnort_lat: 47.8561,
+          wohnort_lng: 12.1289,
+          arbeitsort_lat: 47.8561,
+          arbeitsort_lng: 12.1289,
+          beziehungsstaerke: 4,
+          prioritaet: "niedrig",
+          letzterKontakt: days(60),
+          naechsteAktion: "Hausprojekt planen",
+          tags: ["Familie","Handwerk","Renovierung"],
+          notizen: "Cousin und Elektriker. Hilft zuverlässig bei Hausprojekten.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Tina Fischer",
+          firma: "Grundschule Garching",
+          rolle: "Elternbeirat",
+          email: "tina.fischer@email.de",
+          telefon: "+49 89 5234567",
+          linkedin: "",
+          wohnort: "Garching",
+          arbeitsort: "Garching",
+          wohnort_lat: 48.2489,
+          wohnort_lng: 11.6530,
+          arbeitsort_lat: 48.2489,
+          arbeitsort_lng: 11.6530,
+          beziehungsstaerke: 2,
+          prioritaet: "niedrig",
+          letzterKontakt: days(28),
+          naechsteAktion: "Schulfest besprechen",
+          tags: ["Schule","Eltern","Lokal"],
+          notizen: "Aus dem Kindergarten. Lockerer, angenehmer Kontakt über Schule.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+
+        // Verein / Community (5)
+        {
+          id: generateId(),
+          name: "Robert Lang",
+          firma: "TSV Garching",
+          rolle: "Vorsitzender",
+          email: "robert.lang@tsv-garching.de",
+          telefon: "+49 89 6234567",
+          linkedin: "",
+          wohnort: "Garching",
+          arbeitsort: "Garching",
+          wohnort_lat: 48.2489,
+          wohnort_lng: 11.6530,
+          arbeitsort_lat: 48.2489,
+          arbeitsort_lng: 11.6530,
+          beziehungsstaerke: 3,
+          prioritaet: "mittel",
+          letzterKontakt: days(22),
+          naechsteAktion: "Vereinsevent koordinieren",
+          tags: ["Verein","Sport","Ehrenamt"],
+          notizen: "Organisiert Vereinsevents. Gute Kommunikation.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Claudia Stein",
+          firma: "IHK München",
+          rolle: "Referentin Existenzgründung",
+          email: "claudia.stein@ihk-muenchen.de",
+          telefon: "+49 89 5512345",
+          linkedin: "https://linkedin.com/in/claudia-stein-ihk",
+          wohnort: "München",
+          arbeitsort: "München",
+          wohnort_lat: 48.1351,
+          wohnort_lng: 11.5820,
+          arbeitsort_lat: 48.1351,
+          arbeitsort_lng: 11.5820,
+          beziehungsstaerke: 3,
+          prioritaet: "hoch",
+          letzterKontakt: days(19),
+          naechsteAktion: "Förderanträge besprechen",
+          tags: ["IHK","Gründung","Förderung"],
+          notizen: "Hilft bei Fördermittel-Anträgen. Sehr kompetent und hilfreich.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Werner Fuchs",
+          firma: "Gemeinde Garching",
+          rolle: "Bürgermeister",
+          email: "werner.fuchs@garching.de",
+          telefon: "+49 89 8934567",
+          linkedin: "",
+          wohnort: "Garching",
+          arbeitsort: "Garching",
+          wohnort_lat: 48.2489,
+          wohnort_lng: 11.6530,
+          arbeitsort_lat: 48.2489,
+          arbeitsort_lng: 11.6530,
+          beziehungsstaerke: 2,
+          prioritaet: "mittel",
+          letzterKontakt: days(180),
+          naechsteAktion: "Beim Bürgerfest treffen",
+          tags: ["Politik","Lokal","Gemeinde"],
+          notizen: "Kurzes Gespräch beim Stadtfest. Nett und offen.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Anna-Lena Beck",
+          firma: "Munich Founders Network",
+          rolle: "Organisatorin",
+          email: "anna-lena@munich-founders.de",
+          telefon: "+49 89 7234567",
+          linkedin: "https://linkedin.com/in/anna-lena-beck",
+          wohnort: "München",
+          arbeitsort: "München",
+          wohnort_lat: 48.1351,
+          wohnort_lng: 11.5820,
+          arbeitsort_lat: 48.1351,
+          arbeitsort_lng: 11.5820,
+          beziehungsstaerke: 3,
+          prioritaet: "mittel",
+          letzterKontakt: days(11),
+          naechsteAktion: "Nächstes Founder Meetup anmelden",
+          tags: ["Netzwerk","Events","Gründer"],
+          notizen: "Veranstaltet monatliche Gründer-Meetups. Sehr gut vernetzt.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Ibrahim Yilmaz",
+          firma: "Döner Meister",
+          rolle: "Inhaber",
+          email: "ibrahim@doener-meister.de",
+          telefon: "+49 89 8234567",
+          linkedin: "",
+          wohnort: "Garching",
+          arbeitsort: "Garching",
+          wohnort_lat: 48.2489,
+          wohnort_lng: 11.6530,
+          arbeitsort_lat: 48.2489,
+          arbeitsort_lng: 11.6530,
+          beziehungsstaerke: 3,
+          prioritaet: "niedrig",
+          letzterKontakt: days(6),
+          naechsteAktion: "Lunch nächste Woche",
+          tags: ["Gastronomie","Lokal","Stammgast"],
+          notizen: "Bester Döner der Stadt. Kennt jeden. Freundlich und unkompliziert.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+
+        // Strategisch / Dormant (2)
+        {
+          id: generateId(),
+          name: "Dr. Christina Wagner",
+          firma: "Bosch",
+          rolle: "Vorstand",
+          email: "christina.wagner@bosch.com",
+          telefon: "+49 711 1234567",
+          linkedin: "https://linkedin.com/in/dr-christina-wagner",
+          wohnort: "Stuttgart",
+          arbeitsort: "Stuttgart",
+          wohnort_lat: 48.7758,
+          wohnort_lng: 9.1829,
+          arbeitsort_lat: 48.7758,
+          arbeitsort_lng: 9.1829,
+          beziehungsstaerke: 2,
+          prioritaet: "hoch",
+          letzterKontakt: days(365),
+          naechsteAktion: "Vorsichtig Kontakt aufnehmen",
+          tags: ["ExChef","Konzern","Strategie"],
+          notizen: "Ex-Chefin bei Bosch, jetzt Vorstand. Könnte großer Türöffner sein.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+        {
+          id: generateId(),
+          name: "Patrick O'Brien",
+          firma: "Salesforce",
+          rolle: "VP Sales DACH",
+          email: "patrick.obrien@salesforce.com",
+          telefon: "+49 89 5612345",
+          linkedin: "https://linkedin.com/in/patrick-obrien",
+          wohnort: "München",
+          arbeitsort: "München",
+          wohnort_lat: 48.1351,
+          wohnort_lng: 11.5820,
+          arbeitsort_lat: 48.1351,
+          arbeitsort_lng: 11.5820,
+          beziehungsstaerke: 1,
+          prioritaet: "mittel",
+          letzterKontakt: days(180),
+          naechsteAktion: "LinkedIn Nachricht senden",
+          tags: ["SaaS","Enterprise","Sales"],
+          notizen: "Visitenkarte auf Messe getauscht. Noch im sehr frühen Stadium.",
+          kontakthistorie: [],
+          verbindungen: [],
+          score: 0,
+        },
+      ];
+
+      // Set up connections (bidirectional)
+      const findContact = (name) => contacts.find(c => c.name === name);
+      const addConnection = (name1, name2, typ, notiz) => {
+        const c1 = findContact(name1);
+        const c2 = findContact(name2);
+        if (c1 && c2) {
+          if (!c1.verbindungen.find(v => v.kontaktId === c2.id)) {
+            c1.verbindungen.push({ kontaktId: c2.id, typ, notiz });
+          }
+          if (!c2.verbindungen.find(v => v.kontaktId === c1.id)) {
+            c2.verbindungen.push({ kontaktId: c1.id, typ, notiz });
+          }
+        }
+      };
+
+      addConnection("Dr. Markus Weber", "Frank Zimmermann", "kennt", "Beide Automotive-Branche");
+      addConnection("Sandra Hoffmann", "Lisa Chen", "kennt", "HR-Tech Konferenz");
+      addConnection("Thomas Bergmann", "Michael Schwarz", "empfohlen von", "Thomas hat Michael empfohlen");
+      addConnection("Katharina Braun", "Ibrahim Yilmaz", "kennt", "Gastro-Netzwerk");
+      addConnection("Stefan Huber", "Dr. Florian Meier", "befreundet mit", "Alte Schulfreunde");
+      addConnection("Stefan Huber", "Jürgen Winkler", "befreundet mit", "Tennis-Doppel");
+      addConnection("Elena Popov", "Dr. Christina Wagner", "arbeitet mit", "Beide ex-Bosch");
+      addConnection("Claudia Stein", "Anna-Lena Beck", "arbeitet mit", "Gründer-Ökosystem München");
+      addConnection("Maria Kowalski", "Tina Fischer", "kennt", "Nachbarschaft Garching");
+      addConnection("Carla Rossi", "Lisa Chen", "kennt", "Co-Working / Startup-Szene");
+      addConnection("Dr. Julia Richter", "Dr. Markus Weber", "arbeitet mit", "Rechtliche Beratung");
+      addConnection("Petra Schneider", "Anna-Lena Beck", "kennt", "Marketing für Gründer-Events");
+
+      // Calculate scores
+      return contacts.map(c => ({...c, score: calculateScore(c)}));
+    };
+
+    // ─── Demo Banner ───────────────────────────────────────────────────────────
+    const DemoBanner = () => (
+      <div className="demo-banner">
+        <span>🎯 Demo-Modus – Erkunde den Stakeholder Manager mit Beispieldaten</span>
+        <a href="/stakeholder-manager.html" className="demo-banner-btn">Kostenlos starten →</a>
+      </div>
+    );
+
+    // ─── Demo Footer ───────────────────────────────────────────────────────────
+    const DemoFooter = () => (
+      <div className="demo-footer">
+        Dies ist eine Demo mit fiktiven Beispieldaten. Deine Änderungen werden lokal gespeichert.
+      </div>
+    );
+
+    // Helper functions from original file
+    const computeStats = (contacts) => {
+      const now = new Date();
+      const thisM = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const lastM = (() => { const d = new Date(now); d.setMonth(d.getMonth()-1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })();
+      const newThisM = contacts.filter(c => c.erstellt && c.erstellt.startsWith(thisM)).length;
+      const updThisM = contacts.filter(c => c.aktualisiert && c.aktualisiert.startsWith(thisM)).length;
+      const newLastM = contacts.filter(c => c.erstellt && c.erstellt.startsWith(lastM)).length;
+      const updLastM = contacts.filter(c => c.aktualisiert && c.aktualisiert.startsWith(lastM)).length;
+      let streak = 0;
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(now); d.setMonth(d.getMonth()-i);
+        const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const hasActivity = contacts.some(c => (c.erstellt?.startsWith(m) || c.aktualisiert?.startsWith(m)));
+        if (hasActivity) streak++; else break;
+      }
+      return { total: contacts.length, newThisM, updThisM, newLastM, updLastM, streak, thisM, lastM };
+    };
+
+    const ALL_BADGES = [
+      {id:"contacts_10", icon:"🤝", label:"Netzwerk-Starter", desc:"10 Kontakte"},
+      {id:"contacts_25", icon:"👥", label:"Netzwerk-Builder", desc:"25 Kontakte"},
+      {id:"contacts_50", icon:"🌐", label:"Netzwerk-Master", desc:"50 Kontakte"},
+      {id:"contacts_100", icon:"🚀", label:"Netzwerk-Titan", desc:"100 Kontakte"},
+      {id:"streak_1", icon:"🔥", label:"Auf Kurs", desc:"1 Monat aktiv"},
+      {id:"streak_3", icon:"🔥🔥", label:"On Fire", desc:"3 Monate aktiv"},
+      {id:"streak_6", icon:"🔥🔥🔥", label:"Unstoppable", desc:"6 Monate aktiv"},
+      {id:"update_10_month", icon:"✏️", label:"Detail-Orientiert", desc:"10 Updates/Monat"},
+      {id:"hist_10", icon:"📖", label:"Dokumentiert", desc:"10 Historie-Einträge"},
+    ];
+
+    const awardNewBadges = (stats, contacts) => {
+      const earned = [];
+      if (stats.total >= 10) earned.push("contacts_10");
+      if (stats.total >= 25) earned.push("contacts_25");
+      if (stats.total >= 50) earned.push("contacts_50");
+      if (stats.total >= 100) earned.push("contacts_100");
+      if (stats.streak >= 1) earned.push("streak_1");
+      if (stats.streak >= 3) earned.push("streak_3");
+      if (stats.streak >= 6) earned.push("streak_6");
+      if (stats.updThisM >= 10) earned.push("update_10_month");
+      const tot = contacts.reduce((a,c)=>a+(c.kontakthistorie||[]).length, 0);
+      if (tot >= 10) earned.push("hist_10");
+      return earned;
+    };
+
+    const ActivityPill = ({ contacts }) => {
+      const stats = useMemo(() => computeStats(contacts), [contacts]);
+      const earned = useMemo(() => awardNewBadges(stats, contacts), [stats]);
+      const earnedSet = new Set(earned);
+      const nextBadge = ALL_BADGES.find(b => !earnedSet.has(b.id));
+      const total = stats.updThisM + stats.newThisM;
+      const prevActivity = stats.updLastM + stats.newLastM;
+      const delta = total - prevActivity;
+      const trend = delta > 0 ? "up" : delta < 0 ? "down" : "eq";
+      const trendIcon = { up:"↑", down:"↓", eq:"→" }[trend];
+      const trendColor = { up:"#22c55e", down:"#94a3b8", eq:"#94a3b8" }[trend];
+      const label = `${total} ${total===1?"Kontakt":"Kontakte"} diesen Monat`;
+
+      return (
+        <div title={`Letzter Monat: ${prevActivity} · ${label}`}
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold cursor-default select-none"
+          style={{background:"#f0f8fa", border:"1px solid #b2dde8", color:"#25606f"}}>
+          <span style={{color: trendColor, fontWeight:700}}>{trendIcon}</span>
+          <span>{total}</span>
+          <span className="text-gray-400 font-normal hidden md:inline">gepflegt</span>
+        </div>
+      );
+    };
+
+    const GamificationCard = ({ contacts }) => {
+      const stats = useMemo(() => computeStats(contacts), [contacts]);
+      const earned = useMemo(() => awardNewBadges(stats, contacts), [stats]);
+      const earnedSet = new Set(earned);
+
+      const totalActivity = stats.updThisM + stats.newThisM;
+      const prevActivity  = stats.updLastM + stats.newLastM;
+      const delta = totalActivity - prevActivity;
+      const trend = delta > 0 ? "up" : delta < 0 ? "down" : "eq";
+
+      const nextBadge = ALL_BADGES.find(b => !earnedSet.has(b.id));
+
+      const badgeProgress = (b) => {
+        if (!b) return 0;
+        if (b.id === "contacts_10")  return Math.min(1, stats.total / 10);
+        if (b.id === "contacts_25")  return Math.min(1, stats.total / 25);
+        if (b.id === "contacts_50")  return Math.min(1, stats.total / 50);
+        if (b.id === "contacts_100") return Math.min(1, stats.total / 100);
+        if (b.id === "streak_1")     return Math.min(1, stats.streak / 1);
+        if (b.id === "streak_3")     return Math.min(1, stats.streak / 3);
+        if (b.id === "streak_6")     return Math.min(1, stats.streak / 6);
+        if (b.id === "update_10_month") return Math.min(1, stats.updThisM / 10);
+        if (b.id === "hist_10") {
+          const tot = contacts.reduce((a,c)=>a+(c.kontakthistorie||[]).length, 0);
+          return Math.min(1, tot / 10);
+        }
+        return 0;
+      };
+
+      const trendLabel = trend==="up"
+        ? `↑ ${delta} mehr als letzten Monat`
+        : trend==="down"
+        ? `↓ ${Math.abs(delta)} weniger als letzten Monat`
+        : `→ Vergleichbar mit letztem Monat`;
+      const trendColor = trend==="up" ? "#22c55e" : "#94a3b8";
+
+      const monthName = (ym) => {
+        const [y,m] = ym.split("-");
+        return new Date(+y, +m-1, 1).toLocaleString("de-DE",{month:"long"});
+      };
+
+      const prog = badgeProgress(nextBadge);
+
+      return (
+        <div className="bg-white border rounded-2xl p-6" style={{borderColor:"#dde8ec"}}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="font-bold text-gray-800">📈 Netzwerk-Aktivität</h3>
+              <p className="text-xs text-gray-400 mt-0.5">{monthName(stats.thisM)} {stats.thisM.slice(0,4)}</p>
+            </div>
+            {stats.streak > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
+                style={{background:"#f0f8fa",border:"1px solid #b2dde8",color:"#1e4d5c"}}>
+                🔥 {stats.streak} {stats.streak===1?"Monat":"Monate"} aktiv
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-3 mb-5" style={{gridTemplateColumns:"1fr 1fr"}}>
+            <div className="rounded-xl p-3.5" style={{background:"#f0f8fa",border:"1px solid #b2dde8"}}>
+              <p className="text-xs text-gray-400 mb-1">Dieser Monat</p>
+              <p className="text-2xl font-black" style={{color:"#1e4d5c"}}>{totalActivity}</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {stats.newThisM} neu · {stats.updThisM} gepflegt
+              </p>
+            </div>
+            <div className="rounded-xl p-3.5 bg-gray-50 border">
+              <p className="text-xs text-gray-400 mb-1">Letzter Monat</p>
+              <p className="text-2xl font-black text-gray-400">{prevActivity}</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {stats.newLastM} neu · {stats.updLastM} gepflegt
+              </p>
+            </div>
+          </div>
+          <p className="text-xs font-semibold mb-5" style={{color: trendColor}}>{trendLabel}</p>
+
+          {nextBadge && (
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{nextBadge.icon}</span>
+                  <span className="text-sm font-semibold text-gray-700">{nextBadge.label}</span>
+                </div>
+                <span className="text-xs text-gray-400">{Math.round(prog*100)}%</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-2">
+                <div className="h-2 rounded-full transition-all duration-500"
+                  style={{width:`${prog*100}%`, background:"#4fa3b8"}} />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">{nextBadge.desc}</p>
+            </div>
+          )}
+
+          {earned.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2.5">Errungenschaften</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_BADGES.filter(b => earnedSet.has(b.id)).map(b => (
+                  <div key={b.id} title={b.desc}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold"
+                    style={{background:"#f0f8fa",border:"1px solid #b2dde8",color:"#25606f"}}>
+                    <span>{b.icon}</span>
+                    <span>{b.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {earned.length === 0 && (
+            <p className="text-xs text-gray-400 text-center py-2">
+              Noch keine Errungenschaften — leg los! 🚀
+            </p>
+          )}
+        </div>
+      );
+    };
+
+    // ─── (Rest of components copy exactly from original) ────────────────────────

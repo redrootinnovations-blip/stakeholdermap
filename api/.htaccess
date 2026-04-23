@@ -1,0 +1,21 @@
+# Stakeholder Map API – Apache Config
+
+# Pass Authorization header to PHP (Strato/Apache strips it by default)
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Alternative: CGI pass-through
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+# Security: Deny access to config
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Security: Deny access to SQL
+<Files "init.sql">
+    Order Allow,Deny
+    Deny from all
+</Files>
